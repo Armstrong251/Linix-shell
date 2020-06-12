@@ -14,21 +14,38 @@ args. ***/
 //
 //Nick Armstrong
 //
-void setup(char inputBuff[], char *args[],int *background)
+char history[200];
+void setup(char inputBuff[], char *args[],int *background, int hSize)
 {
     int length,  /* Num characters in the command line */
         i,       /* Index for inputBuff arrray          */
         j,       /* Where to place the next parameter into args[] */
         start;   /* Beginning of next command parameter */
-
+	char temp[40];
+	char filepath[40];
     /* Read what the user enters */
     length = read(STDIN_FILENO, inputBuff, MAXLINE);  
 
     j = 0;
     start = -1;
+    FILE *f1; 
+    if (length == 0){
+	f1 = fopen("history.txt", "w+");
+	if(f1!=NULL){
+		for(j=0; j<hSize; j++){
+			for(i = 0; i <40 ; i++){
+				temp[i] = history[i+(40*j)];
+					if(temp[i]!='\0'){
+						fprintf(f1,"%c",temp[i]);}
+			}
+			fprintf(f1,"\n");
+		}
+	}
+	fclose(f1);
 
-    if (length == 0)
-        exit(0);            /* Cntrl-d was entered, end of user command stream */
+        exit(0);     
+     }
+       /* Cntrl-d was entered, end of user command stream */
 
     if (length < 0){
         perror("error reading command");
@@ -81,19 +98,33 @@ int main(void)
     char *args[MAXLINE/2+1];/* Command line arguments */
     int background;         /* Equals 1 if a command is followed by '&', else 0 */
     pid_t  pid;
-    char history[200];
     int i =0, hSize = 0, number =0, j=0, position; 	
-    char command[MAXLINE] = "";
     char temp[40]; 
-
-
-
+    char pointer[40];
+// Read old history 
+FILE *f1; 
+f1 = fopen("history.txt", "r");
+if(f1!=NULL){
+	
+	while(fscanf(f1,"%s",pointer)!=EOF){
+		for(i=0; i<40; i++){
+			if(pointer[i] == '\0'){
+				history[i+(hSize*40)] = '\0';
+			}
+			else{
+					history[i+hSize*40] = pointer[i];
+			}
+		}
+		hSize++;
+	}
+	fclose(f1);
+}
     while (1){            /* Program terminates normally inside setup if appropriate */
 
 	background = 0;
 	printf("CSE2431Sh$ ");  /* Shell prompt */
         fflush(0);
-        setup(inputBuff, args, &background);       /* Get next command */
+        setup(inputBuff, args, &background,hSize);       /* Get next command */
 //Adds to history
 	if(strcmp(*args,"h") && strcmp(*args, "history")&&strcmp(*args,"rr")&&(args[0][0]!='r')){
 		for(i =0; i<40; i++){
@@ -185,7 +216,7 @@ int main(void)
 	
 	pid =fork();
 	if(pid==0){
-		execvp(inputBuff,args);
+		execvp(args[0],args);
 	}
 	else{
 		if(background==0){
@@ -193,10 +224,6 @@ int main(void)
 		}
 		else sleep(1);
 	}
-/* Fill in the code for these steps:  
-	 (1) Fork a child process using fork(),
-	 (2) The child process will invoke execvp(),
-	 (3) If bkgnd == 0, the parent will wait; 
-		otherwise returns to top of loop to call the setup() function. */
     }
+
 }
